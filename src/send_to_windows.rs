@@ -139,7 +139,8 @@ impl eframe::App for SendWindow {
     fn update(&mut self, ctx: &eframe::egui::Context, _: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.label("Name: ".to_string() + &self.metadata.name);
-            ui.label("Size: ".to_string() + &self.metadata.len.to_string());
+            let size = bytes_to_mb(self.metadata.len).to_string();
+            ui.label("Size: ".to_string() + &size + " Mb");
         });
         
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -166,7 +167,6 @@ impl eframe::App for SendWindow {
             ui.label("Devices not found");
         }
 
-            ui.separator();
             ui.add_space(25.0);
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.label(self.debug.lock().unwrap().to_string());
@@ -178,4 +178,9 @@ impl eframe::App for SendWindow {
        
         
     }
+}
+fn bytes_to_mb(bytes: u64) -> f64 {
+    const BYTES_IN_MB: u64 = 1_048_576;
+    let mb = bytes as f64 / BYTES_IN_MB as f64;
+    (mb * 100.0).round() / 100.0
 }

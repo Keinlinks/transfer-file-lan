@@ -46,6 +46,7 @@ fn open_gui_mode(path_file: String){
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([600.0, 300.0])
             .with_min_inner_size([300.0, 220.0])
+            .with_active(true)
             .with_max_inner_size([900.0, 300.0])
             .with_icon(
                 // NOTE: Adding an icon is optional
@@ -133,6 +134,7 @@ fn open_tray_mode(){
                     }
                     else{
                         stream.shutdown(std::net::Shutdown::Both).unwrap();
+                        restart().unwrap();
                     }
                 };
                 
@@ -174,6 +176,9 @@ fn open_confirmation_window(metadata: MetadataSeriable) -> Result<(String,String
     let native_options = eframe::NativeOptions {
         run_and_return: true,
         viewport: eframe::egui::ViewportBuilder::default()
+            .with_fullscreen(false)
+            .with_resizable(false)
+            .with_active(true)
             .with_inner_size([600.0, 300.0])
             .with_min_inner_size([300.0, 220.0])
             .with_max_inner_size([400.0, 300.0])
@@ -207,9 +212,12 @@ fn download_process(stream: TcpStream, download_dir: String,metadata: MetadataSe
         centered: true,
         persist_window: false,
         viewport: eframe::egui::ViewportBuilder::default()
+            .with_resizable(false)
+            .with_fullscreen(false)
+            .with_active(true)
             .with_inner_size([600.0, 300.0])
-            .with_min_inner_size([300.0, 220.0])
-            .with_max_inner_size([900.0, 300.0])
+            .with_min_inner_size([899.0, 250.0])
+            .with_max_inner_size([900.0, 250.0])
             .with_icon(
                 // NOTE: Adding an icon is optional
                 eframe::icon_data::from_png_bytes(&include_bytes!("../assets/icon-256.png")[..])

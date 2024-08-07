@@ -1,6 +1,7 @@
 use std::sync::mpsc::Sender;
 
-use eframe::egui::{self, Align, Layout};
+use dirs_next::{desktop_dir, document_dir, download_dir};
+use eframe::egui::{self, Align, Layout, RichText};
 use rfd::FileDialog;
 use crate::structs::MetadataSeriable;
 
@@ -11,6 +12,7 @@ pub struct ConfirmWindow {
     download_dir: String,
     #[serde(skip)]
     tx:Option<Sender<(String,String)>>,
+    active_error: bool,
 }
 
 
@@ -24,26 +26,31 @@ impl Default for ConfirmWindow{
                 name: String::new(),
             },
             download_dir: String::new(),
-            tx: None
+            tx: None,
+            active_error: false
         }
     }
 }
 
 impl ConfirmWindow{
-    pub fn new (_: &eframe::CreationContext<'_>, metadata: MetadataSeriable, download_dir: String,tx: Option<Sender<(String, String)>>) -> Self {
+    pub fn new (cc: &eframe::CreationContext<'_>, metadata: MetadataSeriable, mut download_dir: String,tx: Option<Sender<(String, String)>>) -> Self {
+
+        if let Some(storage) = cc.storage {
+            download_dir = eframe::get_value(storage, "download_dir").unwrap_or_default();
+        }
         Self {
             metadata,
             download_dir,
-            tx
+            tx,
+            active_error:false
         }
-    }
-
-    pub fn close_confirm_window(&mut self) {
-        
     }
 }
 
 impl eframe::App for ConfirmWindow {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, "download_dir", &self.download_dir);
+    }
     fn update(&mut self, ctx: &eframe::egui::Context, _: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -62,6 +69,21 @@ impl eframe::App for ConfirmWindow {
                     ui.add_space(12.0);
                 ui.label("Download folder: ".to_string() + &self.download_dir);
             });
+            ui.add_space(12.0);
+            let color_default = egui::Color32::from_rgb(238, 238, 226);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button(RichText::new("Downloads").color(color_default)).clicked() {
+                    self.download_dir = download_dir().unwrap().display().to_string();
+                };
+                ui.add_space(12.0);
+                if ui.button(RichText::new("Desktop").color(color_default)).clicked() {
+                    self.download_dir = desktop_dir().unwrap().display().to_string();
+                };
+                ui.add_space(12.0);
+                if ui.button(RichText::new("Documents").color(color_default)).clicked() {
+                    self.download_dir = document_dir().unwrap().display().to_string();
+                };
+            });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -72,8 +94,15 @@ impl eframe::App for ConfirmWindow {
             ui.with_layout(Layout::bottom_up(Align::LEFT), |ui| {
                 if ui.button("Accept").clicked() {
                     if let Some(tx) = &self.tx {
-                        tx.send(("yes".to_string(), self.download_dir.clone())).unwrap();
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                            if self.download_dir.is_empty(){
+
+                            }
+                            else{
+                                tx.send(("path".to_string(), self.download_dir.clone())).unwrap();
+                                tx.send(("yes".to_string(), self.download_dir.clone())).unwrap();
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                            }
+                        
                     }
                 }
             });
@@ -84,6 +113,18 @@ impl eframe::App for ConfirmWindow {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 }
+            });
+            ui.with_layout(Layout::bottom_up(Align::Center), |ui| {
+                if self.download_dir.is_empty() && !self.active_error {
+                    ui.label("Select a download folder");
+                }
+                else if self.active_error && self.download_dir.is_empty(){
+                    ui.label(RichText::new("Select a download folder").color(egui::Color32::RED));
+                }
+                else{
+                    ui.label(RichText::new("Ready!").color(egui::Color32::GREEN));
+                }
+                
             });
             
         });
